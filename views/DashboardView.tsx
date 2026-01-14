@@ -4,24 +4,26 @@ import {
   TrendingUp, 
   Users, 
   Briefcase, 
-  FileText, 
   ArrowUpRight, 
-  Clock,
-  Plus,
+  Plus, 
   ChevronRight,
-  CheckCircle2,
-  AlertCircle,
-  Building2,
-  ShieldCheck,
   Package,
-  Box,
   Receipt as ReceiptIcon,
   PieChart,
   BarChart3
 } from 'lucide-react';
 import { Service, Product, Client, Quote, Receipt, ViewType, CompanyProfile } from '../types';
 
-// Interface auxiliar para o ícone - Definida no topo para evitar Erros de Referência
+interface DashboardProps {
+  services: Service[];
+  products: Product[];
+  clients: Client[];
+  quotes: Quote[];
+  receipts: Receipt[];
+  onNavigate: (view: ViewType) => void;
+  profile: CompanyProfile;
+}
+
 const FileCheck = ({ size, className }: any) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
@@ -57,30 +59,44 @@ const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
   </div>
 );
 
-const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, quotes, receipts, onNavigate, profile }) => {
-  const projectedRevenue = useMemo(() => quotes
-    .filter(q => q.status === 'aprovado')
-    .reduce((acc, q) => acc + q.total, 0), [quotes]);
+const DashboardView: React.FC<DashboardProps> = ({ 
+  services = [], 
+  products = [], 
+  clients = [], 
+  quotes = [], 
+  receipts = [], 
+  onNavigate 
+}) => {
+  // Cálculos protegidos com opcionais
+  const projectedRevenue = useMemo(() => {
+    return (quotes || [])
+      .filter(q => q?.status === 'aprovado')
+      .reduce((acc, q) => acc + (q?.total || 0), 0);
+  }, [quotes]);
 
-  const realRevenue = useMemo(() => receipts
-    .reduce((acc, r) => acc + r.amount, 0), [receipts]);
+  const realRevenue = useMemo(() => {
+    return (receipts || [])
+      .reduce((acc, r) => acc + (r?.amount || 0), 0);
+  }, [receipts]);
 
-  const lowStockProducts = useMemo(() => products.filter(p => p.stock <= 2).length, [products]);
+  const lowStockProducts = useMemo(() => {
+    return (products || []).filter(p => (p?.stock || 0) <= 2).length;
+  }, [products]);
 
   const categoryStats = useMemo(() => {
     const stats: Record<string, { total: number; count: number }> = {};
     
-    quotes
-      .filter(q => q.status === 'aprovado')
+    (quotes || [])
+      .filter(q => q?.status === 'aprovado')
       .forEach(quote => {
-        quote.items.forEach(item => {
+        (quote?.items || []).forEach(item => {
           const source = item.type === 'service' 
             ? services.find(s => s.id === item.itemId) 
             : products.find(p => p.id === item.itemId);
           
           const category = source?.category || 'Geral';
           const price = item.priceOverride || source?.price || 0;
-          const subtotal = price * item.quantity;
+          const subtotal = price * (item.quantity || 1);
 
           if (!stats[category]) {
             stats[category] = { total: 0, count: 0 };
@@ -103,8 +119,8 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Resumo do Negócio</h1>
-          <p className="text-slate-500">Acompanhe seu desempenho comercial e financeiro.</p>
+          <h1 className="text-2xl font-bold text-slate-800">Resumo Financeiro</h1>
+          <p className="text-slate-500">Gestão simplificada do seu negócio.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => onNavigate('receipts')} className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2">
@@ -114,18 +130,21 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Faturamento Real" value={`R$ ${realRevenue.toLocaleString()}`} icon={TrendingUp} color="bg-emerald-100 text-emerald-600" />
-        <StatCard title="Aprovado (Projetado)" value={`R$ ${projectedRevenue.toLocaleString()}`} icon={FileCheck} color="bg-blue-100 text-blue-600" />
-        <StatCard title="Recibos Emitidos" value={receipts.length} icon={ReceiptIcon} color="bg-emerald-100 text-emerald-600" />
-        <StatCard title="Estoque Baixo" value={lowStockProducts} icon={Package} color="bg-indigo-100 text-indigo-600" />
+        <StatCard title="Total Recebido" value={`R$ ${realRevenue.toLocaleString()}`} icon={TrendingUp} color="bg-emerald-100 text-emerald-600" />
+        <StatCard title="Em Aberto (Aprovado)" value={`R$ ${projectedRevenue.toLocaleString()}`} icon={FileCheck} color="bg-blue-100 text-blue-600" />
+        <StatCard title="Recibos" value={receipts.length} icon={ReceiptIcon} color="bg-emerald-100 text-emerald-600" />
+        <StatCard title="Alerta Estoque" value={lowStockProducts} icon={Package} color="bg-indigo-100 text-indigo-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-bold text-slate-800 flex items-center gap-2"><ReceiptIcon size={20} className="text-emerald-600" /> Fluxo de Caixa Recente</h2>
-              <button onClick={() => onNavigate('receipts')} className="text-emerald-600 text-sm font-medium flex items-center">Ver recibos <ChevronRight size={14} /></button>
+              <h2 className="font-bold text-slate-800 flex items-center gap-2">
+                <ReceiptIcon size={20} className="text-emerald-600" /> 
+                Últimos Recebimentos
+              </h2>
+              <button onClick={() => onNavigate('receipts')} className="text-emerald-600 text-sm font-medium flex items-center">Ver histórico <ChevronRight size={14} /></button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -141,7 +160,7 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
                     </tr>
                   ))}
                   {receipts.length === 0 && (
-                    <tr><td colSpan={3} className="px-6 py-8 text-center text-slate-400 italic">Nenhum recebimento registrado.</td></tr>
+                    <tr><td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhum recebimento registrado ainda.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -149,76 +168,55 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                <BarChart3 size={20} className="text-indigo-600" /> 
-                Volume por Categoria (Aprovados)
-              </h2>
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">Top Categorias</span>
-            </div>
-            
+            <h2 className="font-bold text-slate-800 flex items-center gap-2 mb-8">
+              <BarChart3 size={20} className="text-indigo-600" /> 
+              Faturamento por Categoria
+            </h2>
             <div className="space-y-6">
               {categoryStats.map(([category, data]) => {
                 const percentage = (data.total / maxCategoryValue) * 100;
                 return (
                   <div key={category} className="space-y-2">
                     <div className="flex justify-between items-end">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-700 text-sm">{category}</span>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">({data.count} itens)</span>
-                      </div>
+                      <span className="font-bold text-slate-700 text-sm">{category}</span>
                       <span className="font-black text-slate-900 text-sm">R$ {data.total.toLocaleString()}</span>
                     </div>
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: `${percentage}%` }}
-                      ></div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${percentage}%` }}></div>
                     </div>
                   </div>
                 );
               })}
-              
               {categoryStats.length === 0 && (
-                <div className="py-10 text-center text-slate-400 italic text-sm">
-                  Sem dados de vendas aprovadas para exibir por categoria.
-                </div>
+                <div className="py-8 text-center text-slate-400 italic text-sm">Sem dados para o gráfico.</div>
               )}
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-100">
-             <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-white/20 rounded-xl"><Users size={20} /></div>
-                <h3 className="font-bold text-lg">Próximos Passos</h3>
-             </div>
-             <div className="space-y-4">
-                <button onClick={() => onNavigate('quotes')} className="w-full flex justify-between items-center bg-white/10 p-4 rounded-2xl hover:bg-white/20 transition-all text-left">
-                  <span className="text-sm font-bold">Ver Orçamentos</span>
-                  <ArrowUpRight size={16} />
+          <div className="bg-blue-600 rounded-3xl p-8 text-white shadow-xl">
+             <h3 className="font-bold text-lg mb-4">Acesso Rápido</h3>
+             <div className="space-y-3">
+                <button onClick={() => onNavigate('quotes')} className="w-full flex justify-between items-center bg-white/10 p-4 rounded-2xl hover:bg-white/20 transition-all text-sm font-bold">
+                  Gerar Orçamento <Plus size={16} />
                 </button>
-                <button onClick={() => onNavigate('clients')} className="w-full flex justify-between items-center bg-white/10 p-4 rounded-2xl hover:bg-white/20 transition-all text-left">
-                  <span className="text-sm font-bold">Novo Cliente</span>
-                  <Plus size={16} />
+                <button onClick={() => onNavigate('clients')} className="w-full flex justify-between items-center bg-white/10 p-4 rounded-2xl hover:bg-white/20 transition-all text-sm font-bold">
+                  Novo Cliente <Users size={16} />
                 </button>
              </div>
           </div>
 
           <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-            <h3 className="font-black text-[10px] uppercase text-slate-400 tracking-widest mb-4">Saúde do Negócio</h3>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                  <PieChart size={20} />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500 font-medium">Conversão de Orçamentos</p>
-                  <p className="text-lg font-black text-slate-800">
-                    {quotes.length > 0 ? ((quotes.filter(q => q.status === 'aprovado').length / quotes.length) * 100).toFixed(0) : 0}%
-                  </p>
-                </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <PieChart size={20} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Conversão</p>
+                <p className="text-xl font-black text-slate-800">
+                  {quotes.length > 0 ? ((quotes.filter(q => q.status === 'aprovado').length / quotes.length) * 100).toFixed(0) : 0}%
+                </p>
               </div>
             </div>
           </div>
@@ -227,15 +225,5 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
     </div>
   );
 };
-
-interface DashboardProps {
-  services: Service[];
-  products: Product[];
-  clients: Client[];
-  quotes: Quote[];
-  receipts: Receipt[];
-  onNavigate: (view: ViewType) => void;
-  profile: CompanyProfile;
-}
 
 export default DashboardView;
