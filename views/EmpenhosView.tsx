@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Commitment, CompanyProfile } from '../types';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface EmpenhosViewProps {
   commitments: Commitment[];
@@ -55,73 +55,77 @@ const EmpenhosView: React.FC<EmpenhosViewProps> = ({ commitments, setCommitments
   const totalValue = filteredCommitments.reduce((acc, curr) => acc + curr.value, 0);
 
   const handleDownloadPDF = () => {
-    // Uso da API nativa jsPDF
-    const doc = new jsPDF() as any;
-    const primaryColor = [37, 99, 235]; // Blue 600
-    
-    // Cabeçalho Profissional
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, 210, 40, 'F');
-    
-    if (companyProfile.logo) {
-      try {
-        doc.addImage(companyProfile.logo, 'PNG', 15, 8, 24, 24);
-      } catch (e) {
-        console.error("Falha ao processar logo da empresa", e);
-      }
-    }
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(companyProfile.name || 'Sua Empresa', 45, 22);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Identificação: ${companyProfile.document || '---'}`, 45, 28);
-    
-    doc.setFontSize(14);
-    doc.text('PLANILHA DE EMPENHOS PÚBLICOS', 120, 22);
-    doc.setFontSize(8);
-    doc.text(`Data do Relatório: ${new Date().toLocaleString()}`, 120, 28);
-
-    // Mapeamento de dados para a tabela do PDF
-    const tableBody = filteredCommitments.map(c => [
-      c.status.toUpperCase(),
-      `      ${c.prefeitura}`, // Espaço para o logo desenhado no didDrawCell
-      c.commitmentNumber,
-      c.processNumber,
-      new Date(c.date).toLocaleDateString('pt-BR'),
-      `R$ ${c.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-    ]);
-
-    doc.autoTable({
-      startY: 50,
-      head: [['STATUS', 'ÓRGÃO / PREFEITURA', 'Nº EMPENHO', 'Nº PROCESSO', 'DATA', 'VALOR (R$)']],
-      body: tableBody,
-      theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
-      styles: { fontSize: 8, halign: 'center', cellPadding: 3 },
-      columnStyles: { 1: { halign: 'left', fontStyle: 'bold' }, 5: { halign: 'right', fontStyle: 'bold' } },
-      margin: { left: 15, right: 15 },
-      didDrawCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 1) {
-          const commitment = filteredCommitments[data.row.index];
-          if (commitment.prefeituraLogo) {
-            try {
-              doc.addImage(commitment.prefeituraLogo, 'PNG', data.cell.x + 2, data.cell.y + 1, 6, 6);
-            } catch (e) { /* Fallback silencioso se o logo falhar */ }
-          }
+    try {
+      const doc = new jsPDF();
+      const primaryColor = [37, 99, 235]; 
+      
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      if (companyProfile.logo) {
+        try {
+          doc.addImage(companyProfile.logo, 'PNG', 15, 8, 24, 24);
+        } catch (e) {
+          console.error("Falha ao processar logo da empresa no PDF", e);
         }
       }
-    });
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text(companyProfile.name || 'Sua Empresa', 45, 22);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Identificação: ${companyProfile.document || '---'}`, 45, 28);
+      
+      doc.setFontSize(14);
+      doc.text('PLANILHA DE EMPENHOS PÚBLICOS', 120, 22);
+      doc.setFontSize(8);
+      doc.text(`Data do Relatório: ${new Date().toLocaleString()}`, 120, 28);
 
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFontSize(10);
-    doc.setTextColor(30, 41, 59);
-    doc.text(`TOTAL EM PLANILHA: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 195, finalY, { align: 'right' });
+      const tableBody = filteredCommitments.map(c => [
+        c.status.toUpperCase(),
+        `      ${c.prefeitura}`, 
+        c.commitmentNumber,
+        c.processNumber,
+        new Date(c.date).toLocaleDateString('pt-BR'),
+        `R$ ${c.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      ]);
 
-    doc.save(`Planilha_Empenhos_${new Date().getTime()}.pdf`);
+      autoTable(doc, {
+        startY: 50,
+        head: [['STATUS', 'ÓRGÃO / PREFEITURA', 'Nº EMPENHO', 'Nº PROCESSO', 'DATA', 'VALOR (R$)']],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 8, fontStyle: 'bold', halign: 'center' },
+        styles: { fontSize: 8, halign: 'center', cellPadding: 3 },
+        columnStyles: { 1: { halign: 'left', fontStyle: 'bold' }, 5: { halign: 'right', fontStyle: 'bold' } },
+        margin: { left: 15, right: 15 },
+        didDrawCell: (data: any) => {
+          if (data.section === 'body' && data.column.index === 1) {
+            const commitment = filteredCommitments[data.row.index];
+            if (commitment && commitment.prefeituraLogo) {
+              try {
+                doc.addImage(commitment.prefeituraLogo, 'PNG', data.cell.x + 2, data.cell.y + 1, 6, 6);
+              } catch (e) {
+                // Silencioso se imagem estiver corrompida
+              }
+            }
+          }
+        }
+      });
+
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`TOTAL EM PLANILHA: R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 195, finalY, { align: 'right' });
+
+      doc.save(`Planilha_Empenhos_${new Date().getTime()}.pdf`);
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      alert("Houve um problema ao gerar o PDF. Verifique os dados e tente novamente.");
+    }
   };
 
   const handleSave = () => {
@@ -171,7 +175,6 @@ const EmpenhosView: React.FC<EmpenhosViewProps> = ({ commitments, setCommitments
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header da View */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
@@ -195,7 +198,6 @@ const EmpenhosView: React.FC<EmpenhosViewProps> = ({ commitments, setCommitments
         </div>
       </div>
 
-      {/* Barra de Filtros e Total */}
       <div className="flex flex-col lg:flex-row gap-4 items-stretch">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -218,7 +220,6 @@ const EmpenhosView: React.FC<EmpenhosViewProps> = ({ commitments, setCommitments
         </div>
       </div>
 
-      {/* Planilha (Tabela Principal) */}
       <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -302,7 +303,6 @@ const EmpenhosView: React.FC<EmpenhosViewProps> = ({ commitments, setCommitments
         </div>
       </div>
 
-      {/* Modal de Cadastro (Sheet-like) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-900/80 backdrop-blur-md">
           <div className="bg-white w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] sm:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -319,7 +319,6 @@ const EmpenhosView: React.FC<EmpenhosViewProps> = ({ commitments, setCommitments
             </div>
             
             <div className="p-8 space-y-8 overflow-y-auto flex-1 custom-scrollbar">
-              {/* Seção Logo do Órgão */}
               <div className="flex flex-col md:flex-row gap-8 items-center bg-blue-50/50 p-6 rounded-[2rem] border border-blue-100">
                 <div 
                   className="flex flex-col items-center gap-2 group cursor-pointer" 
@@ -368,7 +367,6 @@ const EmpenhosView: React.FC<EmpenhosViewProps> = ({ commitments, setCommitments
                 </div>
               </div>
 
-              {/* Dados Principais */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status na Planilha</label>

@@ -21,15 +21,23 @@ import {
 } from 'lucide-react';
 import { Service, Product, Client, Quote, Receipt, ViewType, CompanyProfile } from '../types';
 
-interface DashboardProps {
-  services: Service[];
-  products: Product[];
-  clients: Client[];
-  quotes: Quote[];
-  receipts: Receipt[];
-  onNavigate: (view: ViewType) => void;
-  profile: CompanyProfile;
-}
+// Interface auxiliar para o ícone - Definida no topo para evitar Erros de Referência
+const FileCheck = ({ size, className }: any) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/>
+  </svg>
+);
 
 const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
@@ -59,7 +67,6 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
 
   const lowStockProducts = useMemo(() => products.filter(p => p.stock <= 2).length, [products]);
 
-  // Cálculo de totais por categoria
   const categoryStats = useMemo(() => {
     const stats: Record<string, { total: number; count: number }> = {};
     
@@ -85,7 +92,7 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
 
     return Object.entries(stats)
       .sort((a, b) => b[1].total - a[1].total)
-      .slice(0, 6); // Top 6 categorias
+      .slice(0, 6); 
   }, [quotes, services, products]);
 
   const maxCategoryValue = useMemo(() => 
@@ -115,7 +122,6 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Seção de Fluxo de Caixa */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h2 className="font-bold text-slate-800 flex items-center gap-2"><ReceiptIcon size={20} className="text-emerald-600" /> Fluxo de Caixa Recente</h2>
@@ -142,7 +148,6 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
             </div>
           </div>
 
-          {/* NOVA SEÇÃO: Resumo por Categoria */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
             <div className="flex items-center justify-between mb-8">
               <h2 className="font-bold text-slate-800 flex items-center gap-2">
@@ -223,22 +228,14 @@ const DashboardView: React.FC<DashboardProps> = ({ services, products, clients, 
   );
 };
 
-// Interface auxiliar para o ícone
-const FileCheck = ({ size, className }: any) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/>
-  </svg>
-);
+interface DashboardProps {
+  services: Service[];
+  products: Product[];
+  clients: Client[];
+  quotes: Quote[];
+  receipts: Receipt[];
+  onNavigate: (view: ViewType) => void;
+  profile: CompanyProfile;
+}
 
 export default DashboardView;

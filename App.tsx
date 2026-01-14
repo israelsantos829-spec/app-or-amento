@@ -27,6 +27,11 @@ import ReceiptsView from './views/ReceiptsView';
 import ProfileView from './views/ProfileView';
 import EmpenhosView from './views/EmpenhosView';
 
+// Garantir que process exista para evitar erros de referência
+if (typeof (window as any).process === 'undefined') {
+  (window as any).process = { env: { API_KEY: '' } };
+}
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -54,27 +59,31 @@ const App: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
-    const savedServices = localStorage.getItem('sp_services');
-    const savedProducts = localStorage.getItem('sp_products');
-    const savedClients = localStorage.getItem('sp_clients');
-    const savedQuotes = localStorage.getItem('sp_quotes');
-    const savedReceipts = localStorage.getItem('sp_receipts');
-    const savedCommitments = localStorage.getItem('sp_commitments');
-    const savedProfile = localStorage.getItem('sp_profile');
-    const savedCategories = localStorage.getItem('sp_categories');
-    const savedProdCategories = localStorage.getItem('sp_prod_categories');
+    try {
+      const savedServices = localStorage.getItem('sp_services');
+      const savedProducts = localStorage.getItem('sp_products');
+      const savedClients = localStorage.getItem('sp_clients');
+      const savedQuotes = localStorage.getItem('sp_quotes');
+      const savedReceipts = localStorage.getItem('sp_receipts');
+      const savedCommitments = localStorage.getItem('sp_commitments');
+      const savedProfile = localStorage.getItem('sp_profile');
+      const savedCategories = localStorage.getItem('sp_categories');
+      const savedProdCategories = localStorage.getItem('sp_prod_categories');
 
-    if (savedServices) setServices(JSON.parse(savedServices));
-    if (savedProducts) setProducts(JSON.parse(savedProducts));
-    if (savedClients) setClients(JSON.parse(savedClients));
-    if (savedQuotes) setQuotes(JSON.parse(savedQuotes));
-    if (savedReceipts) setReceipts(JSON.parse(savedReceipts));
-    if (savedCommitments) setCommitments(JSON.parse(savedCommitments));
-    if (savedProfile) setCompanyProfile(JSON.parse(savedProfile));
-    if (savedCategories) setCategories(JSON.parse(savedCategories));
-    if (savedProdCategories) setProductCategories(JSON.parse(savedProdCategories));
-    
-    setIsLoaded(true);
+      if (savedServices) setServices(JSON.parse(savedServices));
+      if (savedProducts) setProducts(JSON.parse(savedProducts));
+      if (savedClients) setClients(JSON.parse(savedClients));
+      if (savedQuotes) setQuotes(JSON.parse(savedQuotes));
+      if (savedReceipts) setReceipts(JSON.parse(savedReceipts));
+      if (savedCommitments) setCommitments(JSON.parse(savedCommitments));
+      if (savedProfile) setCompanyProfile(JSON.parse(savedProfile));
+      if (savedCategories) setCategories(JSON.parse(savedCategories));
+      if (savedProdCategories) setProductCategories(JSON.parse(savedProdCategories));
+    } catch (error) {
+      console.error("Erro ao carregar dados do LocalStorage:", error);
+    } finally {
+      setIsLoaded(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -165,7 +174,7 @@ const App: React.FC = () => {
               onClick={() => setCurrentView('profile')}
               className="h-8 w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center text-blue-700 font-bold border border-blue-200 cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all"
             >
-              {companyProfile.logo ? <img src={companyProfile.logo} className="w-full h-full object-cover" /> : companyProfile.name.substring(0, 2).toUpperCase()}
+              {companyProfile.logo ? <img src={companyProfile.logo} className="w-full h-full object-cover" /> : (companyProfile.name || 'S').substring(0, 2).toUpperCase()}
             </div>
           </div>
         </header>
